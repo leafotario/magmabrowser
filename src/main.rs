@@ -75,6 +75,10 @@ fn main() {
                 cursor_y = position.y;
             }
             Event::WindowEvent { event: WindowEvent::MouseInput { state: ElementState::Pressed, button: MouseButton::Left, .. }, .. } => {
+                if cursor_y < ui::CHROME_HEIGHT as f64 {
+                    window.focus_window();
+                }
+
                 // Rastreio de cliques na barra de abas
                 if cursor_y < ui::TABBAR_HEIGHT as f64 {
                     let tab_width = 200.0;
