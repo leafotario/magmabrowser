@@ -64,6 +64,28 @@ impl OmniboxState {
         }
     }
 
+    pub fn delete(&mut self) {
+        if self.select_all_on_type {
+            self.input.clear();
+            self.cursor_position = 0;
+            self.select_all_on_type = false;
+            return;
+        }
+        if self.cursor_position < self.input.len() {
+            self.input.remove(self.cursor_position);
+        }
+    }
+
+    pub fn home(&mut self) {
+        self.select_all_on_type = false;
+        self.cursor_position = 0;
+    }
+
+    pub fn end(&mut self) {
+        self.select_all_on_type = false;
+        self.cursor_position = self.input.len();
+    }
+
     pub fn arrow_left(&mut self) {
         self.select_all_on_type = false;
         if self.cursor_position > 0 {

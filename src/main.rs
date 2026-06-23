@@ -227,6 +227,18 @@ fn main() {
                             omnibox.backspace();
                             window.request_redraw();
                         }
+                        Key::Named(NamedKey::Delete) => {
+                            omnibox.delete();
+                            window.request_redraw();
+                        }
+                        Key::Named(NamedKey::Home) => {
+                            omnibox.home();
+                            window.request_redraw();
+                        }
+                        Key::Named(NamedKey::End) => {
+                            omnibox.end();
+                            window.request_redraw();
+                        }
                         Key::Named(NamedKey::ArrowLeft) => { omnibox.arrow_left(); window.request_redraw(); }
                         Key::Named(NamedKey::ArrowRight) => { omnibox.arrow_right(); window.request_redraw(); }
                         Key::Named(NamedKey::ArrowUp) => { omnibox.arrow_up(); window.request_redraw(); }
@@ -304,6 +316,7 @@ fn main() {
                 }
             }
             Event::AboutToWait => {
+                window.request_redraw();
                 // Checar IPC Wry
                 while let Ok(msg) = ipc_rx.try_recv() {
                     if let Some(title) = msg.strip_prefix("title:") {
