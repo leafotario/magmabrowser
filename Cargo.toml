@@ -1,6 +1,11 @@
 [package]
-name = "Magma_Browser"
+name = "magma_browser"
 version = "0.1.0"
-edition = "2024"
+edition = "2021"
 
 [dependencies]
+wry = { version = "0.35", features = ["os-webview", "protocol", "transparent"] }
+tao = "0.20"
+crossbeam-channel = "0.5"
+windows-core = "0.61"
+rusqlite = { version = "0.30", features = ["bundled"] }
