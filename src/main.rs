@@ -79,6 +79,14 @@ fn main() {
             Event::WindowEvent { event: WindowEvent::MouseInput { state: ElementState::Pressed, button: MouseButton::Left, .. }, .. } => {
                 if cursor_y < ui::CHROME_HEIGHT as f64 {
                     window.focus_window();
+                    use winit::raw_window_handle::HasWindowHandle;
+                    if let Ok(handle) = window.window_handle() {
+                        if let winit::raw_window_handle::RawWindowHandle::Win32(h) = handle.as_raw() {
+                            unsafe {
+                                windows_sys::Win32::UI::Input::KeyboardAndMouse::SetFocus(h.hwnd.get() as _);
+                            }
+                        }
+                    }
                 }
 
                 // Rastreio de cliques na barra de abas
