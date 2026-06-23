@@ -59,6 +59,14 @@ fn main() {
     window.request_redraw();
 
     event_loop.run(move |event, elwt| {
+        if let Event::WindowEvent { event: ref we, .. } = event {
+            use std::fs::OpenOptions;
+            use std::io::Write;
+            if let Ok(mut file) = OpenOptions::new().create(true).append(true).open("magma_debug_events.log") {
+                let _ = writeln!(file, "EVENT: {:?}", we);
+            }
+        }
+        
         elwt.set_control_flow(ControlFlow::WaitUntil(Instant::now() + Duration::from_millis(16)));
 
         match event {
@@ -243,13 +251,31 @@ fn main() {
                         Key::Named(NamedKey::ArrowRight) => { omnibox.arrow_right(); window.request_redraw(); }
                         Key::Named(NamedKey::ArrowUp) => { omnibox.arrow_up(); window.request_redraw(); }
                         Key::Named(NamedKey::ArrowDown) => { omnibox.arrow_down(); window.request_redraw(); }
+                        Key::Named(NamedKey::Space) => {
+                            omnibox.insert_char(' ');
+                            window.request_redraw();
+                        }
                         _ => {
+                            let mut handled = false;
                             if let Some(t) = text {
                                 for c in t.chars() {
                                     if !c.is_control() {
                                         omnibox.insert_char(c);
+                                        handled = true;
                                     }
                                 }
+                            }
+                            if !handled {
+                                if let Key::Character(c) = logical_key {
+                                    if let Some(ch) = c.chars().next() {
+                                        if !ch.is_control() {
+                                            omnibox.insert_char(ch);
+                                            handled = true;
+                                        }
+                                    }
+                                }
+                            }
+                            if handled {
                                 window.request_redraw();
                             }
                         }
@@ -315,7 +341,6 @@ fn main() {
                 }
             }
             Event::AboutToWait => {
-                window.request_redraw();
                 // Checar IPC Wry
                 while let Ok(msg) = ipc_rx.try_recv() {
                     if let Some(title) = msg.strip_prefix("title:") {
