@@ -85,13 +85,15 @@ fn main() {
                         let relative_x = cursor_x % tab_width;
                         if relative_x > tab_width - 25.0 {
                             tab_manager.close_tab(clicked_index);
-                            _webview = None; // Dropa instantaneamente
-                            _webview = Some(engine::builder::build_webview(&window, &ephemeral_context, &adblock_engine, &tab_manager.get_active_tab().unwrap().url, browser_config.hardware_acceleration, ipc_tx.clone()).expect("Falha"));
+                            if let Some(wv) = _webview.as_ref() {
+                                let _ = wv.load_url(&tab_manager.get_active_tab().unwrap().url);
+                            }
                         } else {
-                            // Troca de Aba (Regra de Ouro: Drop e Reidratação)
+                            // Troca de Aba (Usando a mesma webview viva)
                             if tab_manager.switch_tab(clicked_index) {
-                                _webview = None;
-                                _webview = Some(engine::builder::build_webview(&window, &ephemeral_context, &adblock_engine, &tab_manager.get_active_tab().unwrap().url, browser_config.hardware_acceleration, ipc_tx.clone()).expect("Falha"));
+                                if let Some(wv) = _webview.as_ref() {
+                                    let _ = wv.load_url(&tab_manager.get_active_tab().unwrap().url);
+                                }
                                 omnibox.defocus();
                             }
                         }
@@ -99,8 +101,9 @@ fn main() {
                     } else if clicked_index == tab_manager.tabs.len() {
                         // Clicou no botão +
                         tab_manager.new_tab("https://magma.browser/local_cache".to_string());
-                        _webview = None;
-                        _webview = Some(engine::builder::build_webview(&window, &ephemeral_context, &adblock_engine, &tab_manager.get_active_tab().unwrap().url, browser_config.hardware_acceleration, ipc_tx.clone()).expect("Falha"));
+                        if let Some(wv) = _webview.as_ref() {
+                            let _ = wv.load_url(&tab_manager.get_active_tab().unwrap().url);
+                        }
                         omnibox.defocus();
                         window.request_redraw();
                     }
@@ -156,16 +159,18 @@ fn main() {
                         }
                         PhysicalKey::Code(winit::keyboard::KeyCode::KeyT) => {
                             tab_manager.new_tab("https://magma.browser/local_cache".to_string());
-                            _webview = None;
-                            _webview = Some(engine::builder::build_webview(&window, &ephemeral_context, &adblock_engine, &tab_manager.get_active_tab().unwrap().url, browser_config.hardware_acceleration, ipc_tx.clone()).expect("Falha"));
+                            if let Some(wv) = _webview.as_ref() {
+                                let _ = wv.load_url(&tab_manager.get_active_tab().unwrap().url);
+                            }
                             omnibox.defocus();
                             window.request_redraw();
                         }
                         PhysicalKey::Code(winit::keyboard::KeyCode::KeyW) => {
                             let idx = tab_manager.active_index;
                             tab_manager.close_tab(idx);
-                            _webview = None;
-                            _webview = Some(engine::builder::build_webview(&window, &ephemeral_context, &adblock_engine, &tab_manager.get_active_tab().unwrap().url, browser_config.hardware_acceleration, ipc_tx.clone()).expect("Falha"));
+                            if let Some(wv) = _webview.as_ref() {
+                                let _ = wv.load_url(&tab_manager.get_active_tab().unwrap().url);
+                            }
                             omnibox.defocus();
                             window.request_redraw();
                         }
@@ -177,8 +182,9 @@ fn main() {
                                 next = 0;
                             }
                             if tab_manager.switch_tab(next) {
-                                _webview = None;
-                                _webview = Some(engine::builder::build_webview(&window, &ephemeral_context, &adblock_engine, &tab_manager.get_active_tab().unwrap().url, browser_config.hardware_acceleration, ipc_tx.clone()).expect("Falha"));
+                                if let Some(wv) = _webview.as_ref() {
+                                    let _ = wv.load_url(&tab_manager.get_active_tab().unwrap().url);
+                                }
                                 omnibox.defocus();
                                 window.request_redraw();
                             }
@@ -318,11 +324,15 @@ fn main() {
                 
                 // Ostrimmer
                 if let Ok(memory::os_trim::TrimAction::EmergencyCrash) = os_trimmer.try_trim(_webview.as_ref()) {
-                    _webview = None;
-                    _webview = Some(engine::builder::build_webview(&window, &ephemeral_context, &adblock_engine, &tab_manager.get_active_tab().unwrap().url, browser_config.hardware_acceleration, ipc_tx.clone()).expect("Falha"));
+                    if let Some(wv) = _webview.as_ref() {
+                        let _ = wv.load_url("https://magma.browser/local_cache");
+                    }
                 }
             }
             _ => (),
         }
     }).unwrap();
 }
+
+
+
