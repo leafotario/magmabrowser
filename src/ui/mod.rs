@@ -3,7 +3,7 @@ pub mod omnibox;
 pub mod settings;
 
 pub const TABBAR_HEIGHT: u32 = 32;
-pub const OMNIBOX_HEIGHT: u32 = 32;
+pub const OMNIBOX_HEIGHT: u32 = 36;
 pub const CHROME_HEIGHT: u32 = TABBAR_HEIGHT + OMNIBOX_HEIGHT;
 
 use crate::fsm::tab_manager::Tab;
@@ -15,6 +15,31 @@ pub fn clear_rect(buffer: &mut [u32], buf_width: usize, x: usize, y: usize, w: u
         for col in 0..w {
             if offset + col < buffer.len() {
                 buffer[offset + col] = color;
+            }
+        }
+    }
+}
+
+/// Desenha um retângulo com cantos removidos (beveled)
+pub fn draw_beveled_rect(buffer: &mut [u32], buf_width: usize, x: usize, y: usize, w: usize, h: usize, color: u32) {
+    if w < 2 || h < 2 {
+        return clear_rect(buffer, buf_width, x, y, w, h, color);
+    }
+    for row in 0..h {
+        let py = y + row;
+        let mut start_col = 0;
+        let mut end_col = w;
+        
+        if row == 0 || row == h - 1 {
+            start_col = 1;
+            end_col = w - 1;
+        }
+        
+        for col in start_col..end_col {
+            let px = x + col;
+            let offset = py * buf_width + px;
+            if offset < buffer.len() {
+                buffer[offset] = color;
             }
         }
     }
@@ -61,55 +86,55 @@ pub fn draw_string(buffer: &mut [u32], buf_width: usize, x: usize, y: usize, tex
 
 /// Renderiza a barra de abas completa no buffer
 pub fn render_tab_bar(buffer: &mut [u32], width: usize, tabs: &[Tab], active_index: usize) {
-    let bg_color = 0xFF_1E_1E_1E; // Fundo escuro nativo
-    let fg_color = 0xFF_D4_D4_D4; // Texto claro
-    let active_bg = 0xFF_3C_3C_3C; // Fundo aba ativa
-    let inactive_bg = 0xFF_25_25_25; // Fundo aba inativa
-    let border_color = 0xFF_00_00_00; // Divisórias
+    let bg_color = 0xFF_11_11_11; // Darkest background (Title bar)
+    let fg_color = 0xFF_D4_D4_D4; 
+    let active_bg = 0xFF_28_28_28; // Matches Omnibox background
+    let inactive_bg = 0xFF_1C_1C_1C; 
     
-    // Limpar o fundo da Tab Bar
+    // Title bar background
     clear_rect(buffer, width, 0, 0, width, TABBAR_HEIGHT as usize, bg_color);
     
-    let tab_width = 200;
+    let tab_width = 220;
     
     for (i, tab) in tabs.iter().enumerate() {
-        let start_x = i * tab_width;
-        if start_x >= width { break; } // Não renderiza abas fora da tela
+        let start_x = i * tab_width + 8; // Margin from left
+        if start_x >= width { break; } 
         
         let is_active = i == active_index;
         let t_bg = if is_active { active_bg } else { inactive_bg };
         
         let w = if start_x + tab_width > width { width - start_x } else { tab_width };
         
-        // Fundo da aba
-        clear_rect(buffer, width, start_x, 0, w, TABBAR_HEIGHT as usize, t_bg);
+        // Tab shape: top rounded, bottom flat. We can draw it row by row or use clear_rect and carve.
+        // We'll draw beveled top corners manually by drawing rectangles.
+        let tab_y = 6; // Tabs are padded from the top
+        let tab_h = TABBAR_HEIGHT as usize - tab_y; // Connects to the bottom bar
         
-        // Borda direita
-        clear_rect(buffer, width, start_x + w - 1, 0, 1, TABBAR_HEIGHT as usize, border_color);
+        // Draw the main tab block
+        clear_rect(buffer, width, start_x + 2, tab_y, w - 4, tab_h, t_bg); // Body
+        clear_rect(buffer, width, start_x + 1, tab_y + 1, w - 2, tab_h - 1, t_bg); // Mid bevel
+        clear_rect(buffer, width, start_x, tab_y + 2, w, tab_h - 2, t_bg); // Full width base
         
         // Ícone minúsculo / Margem e Título
-        let text_x = start_x + 10;
-        let text_y = (TABBAR_HEIGHT as usize - 16) / 2; // Centralizado
+        let text_x = start_x + 16;
+        let text_y = tab_y + (tab_h - 16) / 2; // Centralizado no bloco da aba
         
-        let title_to_draw = if tab.title.is_empty() { "Carregando..." } else { &tab.title };
+        let title_to_draw = if tab.title.is_empty() { "Nova Aba" } else { &tab.title };
+        let active_fg = if is_active { 0xFF_FF_FF_FF } else { 0xFF_99_99_99 };
         
-        draw_string(buffer, width, text_x, text_y, title_to_draw, fg_color, w.saturating_sub(30));
+        draw_string(buffer, width, text_x, text_y, title_to_draw, active_fg, w.saturating_sub(40));
         
         // Botão X
-        let close_x = start_x + w - 20;
+        let close_x = start_x + w - 24;
         if close_x > start_x + 20 {
-            draw_char(buffer, width, close_x, text_y, 'x', 0xFF_AA_AA_AA);
-        }
-        
-        // Linha superior de destaque na aba ativa
-        if is_active {
-            clear_rect(buffer, width, start_x, 0, w, 2, 0xFF_00_7A_CC); // Azul
+            draw_char(buffer, width, close_x, text_y, 'x', 0xFF_77_77_77);
         }
     }
     
     // Botão nova aba '+'
-    let plus_x = tabs.len() * tab_width + 10;
+    let plus_x = tabs.len() * tab_width + 16;
     if plus_x < width {
-        draw_char(buffer, width, plus_x, (TABBAR_HEIGHT as usize - 16) / 2, '+', fg_color);
+        let plus_y = 12;
+        draw_char(buffer, width, plus_x, plus_y, '+', fg_color);
     }
 }

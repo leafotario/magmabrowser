@@ -105,8 +105,24 @@ fn main() {
                         window.request_redraw();
                     }
                 } else if cursor_y < ui::CHROME_HEIGHT as f64 {
-                    omnibox.focus(&tab_manager.get_active_tab().unwrap().url);
-                    window.request_redraw();
+                    let w = window.inner_size().width as f64;
+                    if cursor_x >= 10.0 && cursor_x < 40.0 {
+                        // Back
+                        if let Some(wv) = _webview.as_ref() { let _ = wv.evaluate_script("window.history.back()"); }
+                    } else if cursor_x >= 45.0 && cursor_x < 75.0 {
+                        // Forward
+                        if let Some(wv) = _webview.as_ref() { let _ = wv.evaluate_script("window.history.forward()"); }
+                    } else if cursor_x >= 80.0 && cursor_x < 110.0 {
+                        // Refresh
+                        if let Some(wv) = _webview.as_ref() { let _ = wv.evaluate_script("location.reload()"); }
+                    } else if cursor_x > w - 40.0 {
+                        // Settings
+                        println!("Settings clicado!");
+                    } else {
+                        // Omnibox Click
+                        omnibox.focus(&tab_manager.get_active_tab().unwrap().url);
+                        window.request_redraw();
+                    }
                 }
             }
             Event::WindowEvent { event: WindowEvent::KeyboardInput { event: KeyEvent { state: ElementState::Pressed, logical_key, physical_key, .. }, .. }, .. } => {
@@ -239,6 +255,26 @@ fn main() {
                             ui::omnibox::render_omnibox(&mut buffer, size.width as usize, &omnibox, &tab_manager.get_active_tab().unwrap().url);
                             
                             let _ = buffer.present();
+                        }
+                    }
+                    
+                    #[cfg(target_os = "windows")]
+                    {
+                        use windows_sys::Win32::UI::WindowsAndMessaging::{FindWindowExW, SetWindowPos, SWP_NOZORDER, SWP_NOACTIVATE};
+                        use winit::raw_window_handle::HasWindowHandle;
+                        let raw = window.window_handle().unwrap().as_raw();
+                        let winit_hwnd = match raw {
+                            winit::raw_window_handle::RawWindowHandle::Win32(h) => h.hwnd.get() as _,
+                            _ => 0,
+                        };
+                        if winit_hwnd != 0 {
+                            let child = unsafe { FindWindowExW(winit_hwnd as _, 0, std::ptr::null(), std::ptr::null()) };
+                            if child != 0 {
+                                let size = window.inner_size();
+                                if size.height > ui::CHROME_HEIGHT {
+                                    unsafe { SetWindowPos(child, 0, 0, ui::CHROME_HEIGHT as i32, size.width as i32, size.height.saturating_sub(ui::CHROME_HEIGHT) as i32, SWP_NOZORDER | SWP_NOACTIVATE); }
+                                }
+                            }
                         }
                     }
                 }

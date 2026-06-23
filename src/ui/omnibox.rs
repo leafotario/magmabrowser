@@ -154,33 +154,53 @@ pub fn resolve_navigation_target(input: &str, search_engine: &str) -> String {
 }
 
 pub fn render_omnibox(buffer: &mut [u32], width: usize, state: &OmniboxState, current_url: &str) {
-    let bg_color = 0xFF_18_18_18; 
-    let field_bg = if state.is_focused { 0xFF_00_00_00 } else { 0xFF_20_20_20 };
-    let text_color = 0xFF_E0_E0_E0;
-    let selected_bg = 0xFF_00_55_AA;
-
+    let bg_color = 0xFF_28_28_28; // Matches active tab background
     crate::ui::clear_rect(buffer, width, 0, crate::ui::TABBAR_HEIGHT as usize, width, crate::ui::OMNIBOX_HEIGHT as usize, bg_color);
 
-    let padding_x = 10;
-    let padding_y = crate::ui::TABBAR_HEIGHT as usize + 8;
-    let field_w = width.saturating_sub(20);
+    let nav_y = crate::ui::TABBAR_HEIGHT as usize + 6;
+    let button_h = 24;
+    let button_w = 30;
+    let btn_bg = 0xFF_3C_3C_3C;
+    let icon_color = 0xFF_DD_DD_DD;
 
-    crate::ui::clear_rect(buffer, width, padding_x, padding_y - 2, field_w, 20, field_bg);
+    // Back `<`
+    crate::ui::draw_beveled_rect(buffer, width, 10, nav_y, button_w, button_h, btn_bg);
+    crate::ui::draw_char(buffer, width, 10 + 11, nav_y + 4, '<', icon_color);
+
+    // Forward `>`
+    crate::ui::draw_beveled_rect(buffer, width, 45, nav_y, button_w, button_h, btn_bg);
+    crate::ui::draw_char(buffer, width, 45 + 11, nav_y + 4, '>', icon_color);
+
+    // Refresh `C`
+    crate::ui::draw_beveled_rect(buffer, width, 80, nav_y, button_w, button_h, btn_bg);
+    crate::ui::draw_char(buffer, width, 80 + 11, nav_y + 4, 'C', icon_color);
+
+    // Settings `S`
+    let settings_x = width.saturating_sub(40);
+    crate::ui::draw_beveled_rect(buffer, width, settings_x, nav_y, button_w, button_h, btn_bg);
+    crate::ui::draw_char(buffer, width, settings_x + 11, nav_y + 4, 'S', icon_color);
+
+    // Omnibox field
+    let omnibox_x = 120;
+    let omnibox_w = width.saturating_sub(120 + 50); // Room for settings
+    
+    let field_bg = if state.is_focused { 0xFF_00_00_00 } else { 0xFF_11_11_11 };
+    crate::ui::draw_beveled_rect(buffer, width, omnibox_x, nav_y, omnibox_w, button_h, field_bg);
 
     let display_text = if state.is_focused { &state.input } else { current_url };
 
     if state.is_focused && state.select_all_on_type && !display_text.is_empty() {
-        let sel_w = (display_text.chars().count() * 8).min(field_w - 10);
-        crate::ui::clear_rect(buffer, width, padding_x + 5, padding_y - 1, sel_w, 18, selected_bg);
+        let sel_w = (display_text.chars().count() * 8).min(omnibox_w - 20);
+        crate::ui::clear_rect(buffer, width, omnibox_x + 10, nav_y + 4, sel_w, 16, 0xFF_00_55_AA);
     }
 
-    crate::ui::draw_string(buffer, width, padding_x + 5, padding_y, display_text, text_color, field_w - 10);
+    crate::ui::draw_string(buffer, width, omnibox_x + 10, nav_y + 4, display_text, 0xFF_E0_E0_E0, omnibox_w.saturating_sub(20));
 
     if state.is_focused && !state.select_all_on_type {
         let chars_before_cursor = state.input[..state.cursor_position].chars().count();
-        let cursor_x = padding_x + 5 + (chars_before_cursor * 8);
-        if cursor_x < width - 10 {
-            crate::ui::clear_rect(buffer, width, cursor_x, padding_y, 2, 16, 0xFF_FF_FF_FF);
+        let cursor_x = omnibox_x + 10 + (chars_before_cursor * 8);
+        if cursor_x < omnibox_x + omnibox_w - 10 {
+            crate::ui::clear_rect(buffer, width, cursor_x, nav_y + 4, 2, 16, 0xFF_FF_FF_FF);
         }
     }
 }
