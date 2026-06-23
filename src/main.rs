@@ -56,6 +56,8 @@ fn main() {
     let mut cursor_x = 0.0;
     let mut cursor_y = 0.0;
 
+    window.request_redraw();
+
     event_loop.run(move |event, elwt| {
         elwt.set_control_flow(ControlFlow::WaitUntil(Instant::now() + Duration::from_millis(16)));
 
@@ -113,16 +115,16 @@ fn main() {
                     }
                 } else if cursor_y < ui::CHROME_HEIGHT as f64 {
                     let w = window.inner_size().width as f64;
-                    if cursor_x >= 10.0 && cursor_x < 40.0 {
+                    if cursor_x >= 10.0 && cursor_x < 46.0 {
                         // Back
                         if let Some(wv) = _webview.as_ref() { let _ = wv.evaluate_script("window.history.back()"); }
-                    } else if cursor_x >= 45.0 && cursor_x < 75.0 {
+                    } else if cursor_x >= 52.0 && cursor_x < 88.0 {
                         // Forward
                         if let Some(wv) = _webview.as_ref() { let _ = wv.evaluate_script("window.history.forward()"); }
-                    } else if cursor_x >= 80.0 && cursor_x < 110.0 {
+                    } else if cursor_x >= 94.0 && cursor_x < 130.0 {
                         // Refresh
                         if let Some(wv) = _webview.as_ref() { let _ = wv.evaluate_script("location.reload()"); }
-                    } else if cursor_x > w - 40.0 {
+                    } else if cursor_x > w - 46.0 {
                         // Settings
                         println!("Settings clicado!");
                     } else {
@@ -132,7 +134,7 @@ fn main() {
                     }
                 }
             }
-            Event::WindowEvent { event: WindowEvent::KeyboardInput { event: KeyEvent { state: ElementState::Pressed, logical_key, physical_key, text, .. }, .. }, .. } => {
+            Event::WindowEvent { event: WindowEvent::KeyboardInput { event: KeyEvent { state: ElementState::Pressed, logical_key, physical_key, text: _text, .. }, .. }, .. } => {
                 let ctrl = modifiers.control_key();
                 let shift = modifiers.shift_key();
                 
@@ -221,16 +223,17 @@ fn main() {
                         Key::Named(NamedKey::ArrowRight) => { omnibox.arrow_right(); window.request_redraw(); }
                         Key::Named(NamedKey::ArrowUp) => { omnibox.arrow_up(); window.request_redraw(); }
                         Key::Named(NamedKey::ArrowDown) => { omnibox.arrow_down(); window.request_redraw(); }
-                        _ => {
-                            if let Some(t) = text {
-                                for c in t.chars() {
-                                    if !c.is_control() {
-                                        omnibox.insert_char(c);
-                                    }
-                                }
+                        Key::Named(NamedKey::Space) => {
+                            omnibox.insert_char(' ');
+                            window.request_redraw();
+                        }
+                        Key::Character(c) => {
+                            if let Some(ch) = c.chars().next() {
+                                omnibox.insert_char(ch);
                                 window.request_redraw();
                             }
                         }
+                        _ => {}
                     }
                 }
             }

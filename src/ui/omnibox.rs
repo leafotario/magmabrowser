@@ -157,32 +157,32 @@ pub fn render_omnibox(buffer: &mut [u32], width: usize, state: &OmniboxState, cu
     let bg_color = 0xFF_28_28_28; // Matches active tab background
     crate::ui::clear_rect(buffer, width, 0, crate::ui::TABBAR_HEIGHT as usize, width, crate::ui::OMNIBOX_HEIGHT as usize, bg_color);
 
-    let nav_y = crate::ui::TABBAR_HEIGHT as usize + 6;
-    let button_h = 24;
-    let button_w = 30;
+    let nav_y = crate::ui::TABBAR_HEIGHT as usize + 8;
+    let button_h = 30;
+    let button_w = 36;
     let btn_bg = 0xFF_3C_3C_3C;
     let icon_color = 0xFF_DD_DD_DD;
 
     // Back `<`
     crate::ui::draw_beveled_rect(buffer, width, 10, nav_y, button_w, button_h, btn_bg);
-    crate::ui::draw_char(buffer, width, 10 + 11, nav_y + 4, '<', icon_color);
+    crate::ui::draw_char(buffer, width, 10 + 14, nav_y + 7, '<', icon_color);
 
     // Forward `>`
-    crate::ui::draw_beveled_rect(buffer, width, 45, nav_y, button_w, button_h, btn_bg);
-    crate::ui::draw_char(buffer, width, 45 + 11, nav_y + 4, '>', icon_color);
+    crate::ui::draw_beveled_rect(buffer, width, 52, nav_y, button_w, button_h, btn_bg);
+    crate::ui::draw_char(buffer, width, 52 + 14, nav_y + 7, '>', icon_color);
 
     // Refresh `C`
-    crate::ui::draw_beveled_rect(buffer, width, 80, nav_y, button_w, button_h, btn_bg);
-    crate::ui::draw_char(buffer, width, 80 + 11, nav_y + 4, 'C', icon_color);
+    crate::ui::draw_beveled_rect(buffer, width, 94, nav_y, button_w, button_h, btn_bg);
+    crate::ui::draw_char(buffer, width, 94 + 14, nav_y + 7, 'C', icon_color);
 
     // Settings `S`
-    let settings_x = width.saturating_sub(40);
+    let settings_x = width.saturating_sub(46);
     crate::ui::draw_beveled_rect(buffer, width, settings_x, nav_y, button_w, button_h, btn_bg);
-    crate::ui::draw_char(buffer, width, settings_x + 11, nav_y + 4, 'S', icon_color);
+    crate::ui::draw_char(buffer, width, settings_x + 14, nav_y + 7, 'S', icon_color);
 
     // Omnibox field
-    let omnibox_x = 120;
-    let omnibox_w = width.saturating_sub(120 + 50); // Room for settings
+    let omnibox_x = 140;
+    let omnibox_w = width.saturating_sub(140 + 56); // Room for settings
     
     let field_bg = if state.is_focused { 0xFF_00_00_00 } else { 0xFF_11_11_11 };
     crate::ui::draw_beveled_rect(buffer, width, omnibox_x, nav_y, omnibox_w, button_h, field_bg);
@@ -191,16 +191,16 @@ pub fn render_omnibox(buffer: &mut [u32], width: usize, state: &OmniboxState, cu
 
     if state.is_focused && state.select_all_on_type && !display_text.is_empty() {
         let sel_w = (display_text.chars().count() * 8).min(omnibox_w - 20);
-        crate::ui::clear_rect(buffer, width, omnibox_x + 10, nav_y + 4, sel_w, 16, 0xFF_00_55_AA);
+        crate::ui::clear_rect(buffer, width, omnibox_x + 10, nav_y + 7, sel_w, 16, 0xFF_00_55_AA);
     }
 
-    crate::ui::draw_string(buffer, width, omnibox_x + 10, nav_y + 4, display_text, 0xFF_E0_E0_E0, omnibox_w.saturating_sub(20));
+    crate::ui::draw_string(buffer, width, omnibox_x + 10, nav_y + 7, display_text, 0xFF_E0_E0_E0, omnibox_w.saturating_sub(20));
 
     if state.is_focused && !state.select_all_on_type {
         let chars_before_cursor = state.input[..state.cursor_position].chars().count();
         let cursor_x = omnibox_x + 10 + (chars_before_cursor * 8);
         if cursor_x < omnibox_x + omnibox_w - 10 {
-            crate::ui::clear_rect(buffer, width, cursor_x, nav_y + 4, 2, 16, 0xFF_FF_FF_FF);
+            crate::ui::clear_rect(buffer, width, cursor_x, nav_y + 7, 2, 16, 0xFF_FF_FF_FF);
         }
     }
 }

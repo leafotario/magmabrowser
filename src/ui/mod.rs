@@ -2,8 +2,8 @@ pub mod font;
 pub mod omnibox;
 pub mod settings;
 
-pub const TABBAR_HEIGHT: u32 = 32;
-pub const OMNIBOX_HEIGHT: u32 = 36;
+pub const TABBAR_HEIGHT: u32 = 40;
+pub const OMNIBOX_HEIGHT: u32 = 46;
 pub const CHROME_HEIGHT: u32 = TABBAR_HEIGHT + OMNIBOX_HEIGHT;
 
 use crate::fsm::tab_manager::Tab;
@@ -107,7 +107,7 @@ pub fn render_tab_bar(buffer: &mut [u32], width: usize, tabs: &[Tab], active_ind
         
         // Tab shape: top rounded, bottom flat. We can draw it row by row or use clear_rect and carve.
         // We'll draw beveled top corners manually by drawing rectangles.
-        let tab_y = 6; // Tabs are padded from the top
+        let tab_y = 8; // Tabs are padded from the top
         let tab_h = TABBAR_HEIGHT as usize - tab_y; // Connects to the bottom bar
         
         // Draw the main tab block
