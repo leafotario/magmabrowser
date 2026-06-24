@@ -15,7 +15,7 @@ impl BrowserConfig {
         }
     }
 
-    fn path() -> PathBuf {
+    fn path() -> Result<PathBuf, String> {
         let mut base = if cfg!(target_os = "windows") {
             if let Ok(appdata) = std::env::var("APPDATA") {
                 PathBuf::from(appdata)
@@ -43,38 +43,51 @@ impl BrowserConfig {
             }
         };
         base.push("PetalBrowser");
-        let _ = fs::create_dir_all(&base);
+        if let Err(e) = fs::create_dir_all(&base) {
+            return Err(format!("Falha de permissão ao criar diretório de configuração ({:?}): {}", base, e));
+        }
         base.push("config.ini");
-        base
+        Ok(base)
     }
 
     pub fn load() -> Self {
         let mut config = Self::default();
-        if let Ok(content) = fs::read_to_string(Self::path()) {
-            for line in content.lines() {
-                let trimmed = line.trim();
-                if trimmed.is_empty() || trimmed.starts_with('#') { continue; }
-                if let Some((k, v)) = trimmed.split_once('=') {
-                    let k = k.trim();
-                    let v = v.trim();
-                    match k {
-                        "search_engine" => config.search_engine = v.to_string(),
-                        "hardware_acceleration" => config.hardware_acceleration = v == "true",
-                        _ => {}
+        match Self::path() {
+            Ok(path) => {
+                if let Ok(content) = fs::read_to_string(&path) {
+                    for line in content.lines() {
+                        let trimmed = line.trim();
+                        if trimmed.is_empty() || trimmed.starts_with('#') { continue; }
+                        if let Some((k, v)) = trimmed.split_once('=') {
+                            let k = k.trim();
+                            let v = v.trim();
+                            match k {
+                                "search_engine" => config.search_engine = v.to_string(),
+                                "hardware_acceleration" => config.hardware_acceleration = v == "true",
+                                _ => {}
+                            }
+                        }
+                    }
+                } else {
+                    if let Err(e) = config.save() {
+                        println!("⚠️ Aviso: O Petal rodará com configurações padrão, falha na persistência. Detalhe: {}", e);
                     }
                 }
             }
-        } else {
-            let _ = config.save();
+            Err(e) => {
+                println!("⚠️ Aviso Crítico de Configuração: {}", e);
+                println!("⚠️ O Petal rodará apenas com configurações temporárias.");
+            }
         }
         config
     }
 
     pub fn save(&self) -> Result<(), String> {
+        let path = Self::path()?;
         let content = format!(
             "search_engine={}\nhardware_acceleration={}\n",
             self.search_engine, self.hardware_acceleration
         );
-        fs::write(Self::path(), content).map_err(|e| format!("Erro de I/O ao salvar config: {}", e))
+        fs::write(&path, content).map_err(|e| format!("Erro de disco ao escrever no arquivo ({:?}): {}", path, e))
     }
 }
