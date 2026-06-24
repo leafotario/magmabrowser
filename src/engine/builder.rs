@@ -59,14 +59,59 @@ pub fn build_webview(
         }
     });
 
+    let adblock_engine_clone = adblock_engine.clone();
+    builder = builder.with_navigation_handler(move |nav_url| {
+        if adblock_engine_clone.should_block(&nav_url) {
+            return false; // Bloqueia navegação host
+        }
+        true
+    });
+
     // Injeção de IPC para rastrear Document Title (nativo não suportado cross-platform sem extensões)
     builder = builder.with_ipc_handler(move |request| {
         let msg = request; // request is a String in wry
         let _ = ipc_tx.send(msg);
     });
 
+    let blocked_array_js = adblock_engine.get_blocked_domains_js_array();
     let init_script = format!(r#"
         (function() {{
+            const blocked = {};
+            function isBlocked(url) {{
+                if (!url) return false;
+                let lower = url.toLowerCase();
+                for (let i = 0; i < blocked.length; i++) {{
+                    if (lower.indexOf(blocked[i]) !== -1) return true;
+                }}
+                return false;
+            }}
+
+            const origFetch = window.fetch;
+            window.fetch = async function(...args) {{
+                let url = (typeof args[0] === 'string') ? args[0] : (args[0] && args[0].url);
+                if (isBlocked(url)) return Promise.reject(new Error('Magma Adblock: Fetch blocked'));
+                return origFetch.apply(this, args);
+            }};
+
+            const origOpen = XMLHttpRequest.prototype.open;
+            XMLHttpRequest.prototype.open = function(...args) {{
+                if (isBlocked(args[1])) return;
+                return origOpen.apply(this, args);
+            }};
+
+            new MutationObserver((mutations) => {{
+                for (let m of mutations) {{
+                    for (let n of m.addedNodes) {{
+                        if (n.nodeType === 1) {{
+                            if ((n.tagName === 'SCRIPT' || n.tagName === 'IFRAME' || n.tagName === 'IMG') && isBlocked(n.src)) {{
+                                n.src = '';
+                                n.remove();
+                            }}
+                        }}
+                    }}
+                }}
+            }}).observe(document.documentElement || document, {{ childList: true, subtree: true }});
+
             window.ipc.postMessage('{}|title|' + document.title);
             new MutationObserver(function(mutations) {{
                 window.ipc.postMessage('{}|title|' + document.title);
@@ -75,7 +120,7 @@ pub fn build_webview(
                 {{ subtree: true, characterData: true, childList: true }}
             );
         }})();
-    "#, tab_id, tab_id);
+    "#, blocked_array_js, tab_id, tab_id);
     builder = builder.with_initialization_script(&init_script);
 
     #[cfg(target_os = "windows")]
@@ -86,7 +131,5 @@ pub fn build_webview(
         }
         builder = builder.with_additional_browser_args(&args);
     }
-    
-    let builder = adblock_engine.attach_to_builder(builder);
     builder.with_url(url)?.build()
 }

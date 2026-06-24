@@ -1,81 +1,69 @@
-use crossbeam_channel::{unbounded, Sender};
-use memmap2::Mmap;
-use wry::http::{Response, StatusCode};
-use wry::RequestAsyncResponder;
-
-#[repr(align(64))]
-pub struct BlockedBloomFilter {
-    pub data: [u8; 64],
-}
-
-impl BlockedBloomFilter {
-    #[inline(always)]
-    pub fn might_contain(&self, _hash: u64) -> bool { false }
-}
-
-pub struct StaticDAT<'a> {
-    _mmap: &'a Mmap,
-}
-
-impl<'a> StaticDAT<'a> {
-    pub fn exact_match(&self, _uri: &str) -> bool { false }
-}
-
-pub struct RequestPayload {
-    pub uri: String,
-    pub responder: RequestAsyncResponder,
-}
+use std::collections::HashSet;
 
 #[derive(Clone)]
 pub struct AdblockEngine {
-    worker_tx: Sender<RequestPayload>,
+    blocked_domains: HashSet<String>,
 }
 
 impl AdblockEngine {
     pub fn start() -> Self {
-        let (tx, rx) = unbounded::<RequestPayload>();
-        std::thread::spawn(move || {
-            let bloom = BlockedBloomFilter { data: [0; 64] };
-            while let Ok(payload) = rx.recv() {
-                let is_blocked = Self::analyze(&payload.uri, &bloom);
-                if is_blocked {
-                    let response = Response::builder().status(StatusCode::FORBIDDEN).body(vec![]).unwrap();
-                    payload.responder.respond(response);
-                } else {
-                    let response = Response::builder().status(StatusCode::OK).body(vec![]).unwrap();
-                    payload.responder.respond(response);
-                }
-            }
-        });
-        Self { worker_tx: tx }
+        // Inicializa com uma lista de domínios conhecidos de anúncios e tracking
+        let mut domains = HashSet::new();
+        let base_list = vec![
+            "doubleclick.net",
+            "google-analytics.com",
+            "googlesyndication.com",
+            "adservice.google.com",
+            "amazon-adsystem.com",
+            "taboola.com",
+            "outbrain.com",
+            "criteo.com",
+            "adsafeprotected.com",
+            "adnxs.com",
+            "adform.net",
+            "facebook.com/tr/",
+            "connect.facebook.net",
+            "pixel.facebook.com",
+            "hotjar.com",
+            "clarity.ms",
+        ];
+        
+        for d in base_list {
+            domains.insert(d.to_string());
+        }
+
+        Self {
+            blocked_domains: domains,
+        }
     }
-    
-    fn analyze(uri: &str, bloom: &BlockedBloomFilter) -> bool {
-        let pseudo_hash = uri.len() as u64; 
-        if bloom.might_contain(pseudo_hash) { return true; }
+
+    /// Analisa se a URL dada (navegação) pertence a algum domínio bloqueado.
+    pub fn should_block(&self, url: &str) -> bool {
+        // Normaliza a URL para pegar apenas a parte relevante (ignorando scheme)
+        let normalized = url.to_lowercase();
+        
+        // Exceções para esquemas nativos/locais
+        if normalized.starts_with("magma://") 
+            || normalized.starts_with("file://")
+            || normalized.starts_with("localhost")
+            || normalized.starts_with("127.0.0.1") {
+            return false;
+        }
+
+        for domain in &self.blocked_domains {
+            if normalized.contains(domain) {
+                // Log útil e sutil apenas quando bloqueia de fato
+                println!("🛡️ Adblock interceptou navegação para: {}", domain);
+                return true;
+            }
+        }
         false
     }
 
-    #[cfg(any(target_os = "windows", target_os = "macos", target_os = "ios", target_os = "android"))]
-    pub fn attach_to_builder<'a>(
-        &self, 
-        builder: wry::WebViewBuilder<'a>
-    ) -> wry::WebViewBuilder<'a> {
-        let tx = self.worker_tx.clone();
-        builder.with_asynchronous_custom_protocol(
-            "magma".into(),
-            move |request, responder| {
-                let uri = request.uri().to_string();
-                let _ = tx.send(RequestPayload { uri, responder });
-            }
-        )
-    }
-
-    #[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "ios", target_os = "android")))]
-    pub fn attach_to_builder<'a>(
-        &self, 
-        builder: wry::WebViewBuilder<'a>
-    ) -> wry::WebViewBuilder<'a> {
-        builder
+    /// Retorna a lista de domínios bloqueados como uma string de Array JSON
+    /// Útil para injetar o escudo dinâmico no JS.
+    pub fn get_blocked_domains_js_array(&self) -> String {
+        let items: Vec<String> = self.blocked_domains.iter().map(|d| format!("'{}'", d)).collect();
+        format!("[{}]", items.join(","))
     }
 }

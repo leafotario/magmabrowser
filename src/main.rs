@@ -51,11 +51,7 @@ fn main() {
         ipc_tx.clone(),
     ).expect("Falha ao instanciar WebView.");
     webviews.insert(initial_tab.id, initial_wv);
-
     let mut settings_window: Option<(winit::window::Window, wry::WebView)> = None;
-
-    let adblock_engine_loop = adblock_engine.clone();
-
     let mut modifiers = ModifiersState::empty();
     let mut cursor_x = 0.0;
     let mut cursor_y = 0.0;
