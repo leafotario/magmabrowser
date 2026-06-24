@@ -59,14 +59,6 @@ fn main() {
     window.request_redraw();
 
     event_loop.run(move |event, elwt| {
-        if let Event::WindowEvent { event: ref we, .. } = event {
-            use std::fs::OpenOptions;
-            use std::io::Write;
-            if let Ok(mut file) = OpenOptions::new().create(true).append(true).open("magma_debug_events.log") {
-                let _ = writeln!(file, "EVENT: {:?}", we);
-            }
-        }
-        
         elwt.set_control_flow(ControlFlow::WaitUntil(Instant::now() + Duration::from_millis(16)));
 
         match event {
@@ -175,7 +167,6 @@ fn main() {
                         if let Some(wv) = webviews.get(&active_id) { let _ = wv.evaluate_script("location.reload()"); }
                     } else if cursor_x > w - 46.0 {
                         // Settings
-                        println!("Settings clicado!");
                     } else {
                         // Omnibox Click
                         omnibox.focus(&tab_manager.get_active_tab().unwrap().url);
