@@ -126,12 +126,15 @@ pub fn build_webview(
     let init_script = format!(r#"
         (function() {{
             const blocked = {};
-            function isBlocked(url) {{
-                if (!url) return false;
-                let lower = url.toLowerCase();
-                for (let i = 0; i < blocked.length; i++) {{
-                    if (lower.indexOf(blocked[i]) !== -1) return true;
-                }}
+            function isBlocked(urlStr) {{
+                if (!urlStr) return false;
+                try {{
+                    let parsed = new URL(urlStr, window.location.href);
+                    let host = parsed.hostname.toLowerCase();
+                    for (let i = 0; i < blocked.length; i++) {{
+                        if (host === blocked[i] || host.endsWith('.' + blocked[i])) return true;
+                    }}
+                }} catch(e) {{}}
                 return false;
             }}
 
@@ -148,6 +151,18 @@ pub fn build_webview(
                 return origOpen.apply(this, args);
             }};
 
+            if (navigator.sendBeacon) {{
+                const origBeacon = navigator.sendBeacon;
+                navigator.sendBeacon = function(url, data) {{
+                    if (isBlocked(url)) return false;
+                    return origBeacon.call(navigator, url, data);
+                }};
+            }}
+
+            // Nota técnica: O MutationObserver é "Best Effort".
+            // No nível Bare-Metal do WebView nativo, não conseguimos interceptar a rede (network layer)
+            // de requisições de media (img, script src) via HTTPS no cross-platform sem extensões.
+            // Portanto, o download de alguns desses recursos pode iniciar antes da remoção da DOM.
             new MutationObserver((mutations) => {{
                 for (let m of mutations) {{
                     for (let n of m.addedNodes) {{

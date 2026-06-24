@@ -37,9 +37,16 @@ impl AdblockEngine {
         }
     }
 
+fn extract_host(url: &str) -> Option<&str> {
+    let after_scheme = url.split("://").nth(1).unwrap_or(url);
+    let host_port = after_scheme.split('/').next().unwrap_or(after_scheme);
+    let host = host_port.split(':').next().unwrap_or(host_port);
+    if host.is_empty() { None } else { Some(host) }
+}
+
     /// Analisa se a URL dada (navegação) pertence a algum domínio bloqueado.
     pub fn should_block(&self, url: &str) -> bool {
-        // Normaliza a URL para pegar apenas a parte relevante (ignorando scheme)
+        // Normaliza a URL
         let normalized = url.to_lowercase();
         
         // Exceções para esquemas nativos/locais
@@ -50,11 +57,13 @@ impl AdblockEngine {
             return false;
         }
 
-        for domain in &self.blocked_domains {
-            if normalized.contains(domain) {
-                // Log útil e sutil apenas quando bloqueia de fato
-                println!("🛡️ Adblock interceptou navegação para: {}", domain);
-                return true;
+        if let Some(host) = Self::extract_host(&normalized) {
+            for domain in &self.blocked_domains {
+                if host == domain || host.ends_with(&format!(".{}", domain)) {
+                    // Log útil e sutil apenas quando bloqueia de fato
+                    println!("🛡️ Adblock interceptou navegação para: {}", domain);
+                    return true;
+                }
             }
         }
         false
