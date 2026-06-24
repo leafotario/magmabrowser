@@ -12,13 +12,62 @@ pub struct EphemeralWebContext {
     pub data_dir: PathBuf,
 }
 
+#[cfg(target_os = "windows")]
+fn is_process_alive(pid: u32) -> bool {
+    use windows_sys::Win32::System::Threading::{OpenProcess, PROCESS_QUERY_LIMITED_INFORMATION, GetExitCodeProcess};
+    use windows_sys::Win32::Foundation::CloseHandle;
+    unsafe {
+        let handle = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, 0, pid);
+        if handle == 0 { return false; }
+        let mut exit_code: u32 = 0;
+        let success = GetExitCodeProcess(handle, &mut exit_code);
+        CloseHandle(handle);
+        if success == 0 { return false; }
+        exit_code == 259 // STILL_ACTIVE
+    }
+}
+
+#[cfg(not(target_os = "windows"))]
+fn is_process_alive(pid: u32) -> bool {
+    unsafe { libc::kill(pid as i32, 0) == 0 || std::io::Error::last_os_error().raw_os_error() == Some(libc::EPERM) }
+}
+
 impl EphemeralWebContext {
     pub fn new() -> Self {
+        Self::cleanup_abandoned();
         let timestamp = SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_nanos();
+        let current_pid = std::process::id();
         let mut data_dir = env::temp_dir();
-        data_dir.push(format!("magma_volatile_{}", timestamp));
+        data_dir.push(format!("magma_volatile_{}_{}", current_pid, timestamp));
         fs::create_dir_all(&data_dir).expect("Falha");
         Self { data_dir }
+    }
+
+    fn cleanup_abandoned() {
+        let temp = env::temp_dir();
+        let current_pid = std::process::id();
+        if let Ok(entries) = fs::read_dir(&temp) {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path.is_dir() {
+                    if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
+                        if name.starts_with("magma_volatile_") {
+                            let parts: Vec<&str> = name.split('_').collect();
+                            if parts.len() == 4 {
+                                if let Ok(pid) = parts[2].parse::<u32>() {
+                                    if pid != current_pid && !is_process_alive(pid) {
+                                        let _ = fs::remove_dir_all(&path);
+                                    }
+                                }
+                            } else if parts.len() == 3 {
+                                // Formato antigo sem PID
+                                let _ = fs::remove_dir_all(&path);
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
