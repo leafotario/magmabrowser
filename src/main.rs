@@ -20,7 +20,7 @@ fn main() {
     let event_loop = EventLoop::new().unwrap();
 
     let window = WindowBuilder::new()
-        .with_title("Magma Browser [Bare-Metal Edition]")
+        .with_title("Petal Browser [Bare-Metal Edition]")
         .with_inner_size(winit::dpi::LogicalSize::new(1280.0, 720.0))
         .build(&event_loop)
         .expect("Falha arquitetural crítica.");
@@ -146,7 +146,7 @@ fn main() {
                         }
                         window.request_redraw();
                     } else if clicked_index == tab_manager.tabs.len() {
-                        tab_manager.new_tab("https://magma.browser/local_cache".to_string());
+                        tab_manager.new_tab("https://petal.browser/local_cache".to_string());
                         let new_tab = tab_manager.get_active_tab().unwrap();
                         let new_wv = engine::builder::build_webview(
                             &window,
@@ -182,7 +182,7 @@ fn main() {
                         // Settings
                         if settings_window.is_none() {
                             let sw = WindowBuilder::new()
-                                .with_title("Configurações do Magma")
+                                .with_title("Configurações do Petal")
                                 .with_inner_size(winit::dpi::LogicalSize::new(450.0, 350.0))
                                 .build(elwt)
                                 .unwrap();
@@ -213,7 +213,7 @@ fn main() {
                         PhysicalKey::Code(winit::keyboard::KeyCode::Comma) => {
                             if settings_window.is_none() {
                                 let sw = WindowBuilder::new()
-                                    .with_title("Configurações do Magma")
+                                    .with_title("Configurações do Petal")
                                     .with_inner_size(winit::dpi::LogicalSize::new(450.0, 350.0))
                                     .build(elwt)
                                     .unwrap();
@@ -234,7 +234,7 @@ fn main() {
                             window.request_redraw();
                         }
                         PhysicalKey::Code(winit::keyboard::KeyCode::KeyT) => {
-                            tab_manager.new_tab("https://magma.browser/local_cache".to_string());
+                            tab_manager.new_tab("https://petal.browser/local_cache".to_string());
                             let new_tab = tab_manager.get_active_tab().unwrap();
                             let new_wv = engine::builder::build_webview(
                                 &window,
@@ -491,7 +491,7 @@ fn main() {
                 let active_wv = webviews.get(&tab_manager.get_active_tab().unwrap().id);
                 if let Ok(memory::os_trim::TrimAction::EmergencyCrash) = os_trimmer.try_trim(active_wv) {
                     if let Some(wv) = active_wv {
-                        let _ = wv.load_url("https://magma.browser/local_cache");
+                        let _ = wv.load_url("https://petal.browser/local_cache");
                     }
                 }
             }

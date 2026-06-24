@@ -38,7 +38,7 @@ impl EphemeralWebContext {
         let timestamp = SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_nanos();
         let current_pid = std::process::id();
         let mut data_dir = env::temp_dir();
-        data_dir.push(format!("magma_volatile_{}_{}", current_pid, timestamp));
+        data_dir.push(format!("petal_volatile_{}_{}", current_pid, timestamp));
         fs::create_dir_all(&data_dir).expect("Falha");
         Self { data_dir }
     }
@@ -51,7 +51,7 @@ impl EphemeralWebContext {
                 let path = entry.path();
                 if path.is_dir() {
                     if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
-                        if name.starts_with("magma_volatile_") {
+                        if name.starts_with("petal_volatile_") {
                             let parts: Vec<&str> = name.split('_').collect();
                             if parts.len() == 4 {
                                 if let Ok(pid) = parts[2].parse::<u32>() {
@@ -138,7 +138,7 @@ pub fn build_webview(
             const origFetch = window.fetch;
             window.fetch = async function(...args) {{
                 let url = (typeof args[0] === 'string') ? args[0] : (args[0] && args[0].url);
-                if (isBlocked(url)) return Promise.reject(new Error('Magma Adblock: Fetch blocked'));
+                if (isBlocked(url)) return Promise.reject(new Error('Petal Adblock: Fetch blocked'));
                 return origFetch.apply(this, args);
             }};
 

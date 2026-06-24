@@ -6,7 +6,7 @@ pub fn get_settings_html(config: &BrowserConfig) -> String {
 <html>
 <head>
     <meta charset="utf-8">
-    <title>Configurações do Magma</title>
+    <title>Configurações do Petal</title>
     <style>
         body {{
             background-color: #1e1e1e;

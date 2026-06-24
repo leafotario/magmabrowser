@@ -188,7 +188,7 @@ pub fn resolve_navigation_target(input: &str, search_engine: &str) -> String {
     let trimmed = input.trim();
     if trimmed.is_empty() { return String::new(); }
 
-    if trimmed.starts_with("http://") || trimmed.starts_with("https://") || trimmed.starts_with("file://") || trimmed.starts_with("magma://") {
+    if trimmed.starts_with("http://") || trimmed.starts_with("https://") || trimmed.starts_with("file://") || trimmed.starts_with("petal://") {
         return trimmed.to_string();
     }
 

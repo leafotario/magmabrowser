@@ -42,7 +42,7 @@ impl BrowserConfig {
                 std::env::current_dir().unwrap_or_default()
             }
         };
-        base.push("MagmaBrowser");
+        base.push("PetalBrowser");
         let _ = fs::create_dir_all(&base);
         base.push("config.ini");
         base

@@ -1,9 +1,9 @@
 [package]
-name = "magma_browser"
+name = "petal_browser"
 version = "0.1.0"
 edition = "2021"
 description = "O navegador com o footprint residente de RAM mais restrito já concebido."
-authors = ["Magma Architect"]
+authors = ["Petal Architect"]
 publish = false
 
 [dependencies]

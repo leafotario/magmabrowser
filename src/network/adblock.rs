@@ -43,7 +43,7 @@ impl AdblockEngine {
         let normalized = url.to_lowercase();
         
         // Exceções para esquemas nativos/locais
-        if normalized.starts_with("magma://") 
+        if normalized.starts_with("petal://") 
             || normalized.starts_with("file://")
             || normalized.starts_with("localhost")
             || normalized.starts_with("127.0.0.1") {
