@@ -47,6 +47,18 @@ impl OmniboxState {
         }
     }
 
+    pub fn insert_str(&mut self, text: &str) {
+        if self.select_all_on_type {
+            self.input.clear();
+            self.cursor_position = 0;
+            self.select_all_on_type = false;
+        }
+        if self.cursor_position <= self.input.len() {
+            self.input.insert_str(self.cursor_position, text);
+            self.cursor_position += text.len();
+        }
+    }
+
     pub fn backspace(&mut self) {
         if self.select_all_on_type {
             self.input.clear();

@@ -56,6 +56,7 @@ fn main() {
     let mut cursor_x = 0.0;
     let mut cursor_y = 0.0;
 
+    window.set_ime_allowed(true);
     window.request_redraw();
 
     event_loop.run(move |event, elwt| {
@@ -67,6 +68,18 @@ fn main() {
                     elwt.exit();
                 } else {
                     settings_window = None;
+                }
+            }
+            Event::WindowEvent { event: WindowEvent::Focused(focused), .. } => {
+                if !focused {
+                    omnibox.defocus();
+                    window.request_redraw();
+                }
+            }
+            Event::WindowEvent { event: WindowEvent::Ime(winit::event::Ime::Commit(text)), .. } => {
+                if omnibox.is_focused {
+                    omnibox.insert_str(&text);
+                    window.request_redraw();
                 }
             }
             Event::WindowEvent { event: WindowEvent::ModifiersChanged(mods), .. } => {
@@ -427,6 +440,16 @@ fn main() {
                                 window.request_redraw();
                             } else if cmd == "url" {
                                 tab_manager.update_tab_url(tab_id, payload);
+                                window.request_redraw();
+                            } else if cmd == "focus_omnibox" {
+                                window.focus_window();
+                                use winit::raw_window_handle::HasWindowHandle;
+                                if let Ok(handle) = window.window_handle() {
+                                    if let winit::raw_window_handle::RawWindowHandle::Win32(h) = handle.as_raw() {
+                                        unsafe { windows_sys::Win32::UI::Input::KeyboardAndMouse::SetFocus(h.hwnd.get() as _); }
+                                    }
+                                }
+                                omnibox.focus(&tab_manager.get_active_tab().unwrap().url);
                                 window.request_redraw();
                             }
                         }

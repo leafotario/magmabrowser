@@ -112,6 +112,13 @@ pub fn build_webview(
                 }}
             }}).observe(document.documentElement || document, {{ childList: true, subtree: true }});
 
+            window.addEventListener('keydown', function(e) {{
+                if (e.ctrlKey && e.key.toLowerCase() === 'l') {{
+                    e.preventDefault();
+                    window.ipc.postMessage('{}|focus_omnibox|');
+                }}
+            }});
+
             window.ipc.postMessage('{}|title|' + document.title);
             new MutationObserver(function(mutations) {{
                 window.ipc.postMessage('{}|title|' + document.title);
@@ -120,7 +127,7 @@ pub fn build_webview(
                 {{ subtree: true, characterData: true, childList: true }}
             );
         }})();
-    "#, blocked_array_js, tab_id, tab_id);
+    "#, blocked_array_js, tab_id, tab_id, tab_id);
     builder = builder.with_initialization_script(&init_script);
 
     #[cfg(target_os = "windows")]
