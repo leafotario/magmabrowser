@@ -416,12 +416,13 @@ fn main() {
                             _ => 0,
                         };
                         if winit_hwnd != 0 {
-                            let child = unsafe { FindWindowExW(winit_hwnd as _, 0, std::ptr::null(), std::ptr::null()) };
-                            if child != 0 {
+                            let mut child = unsafe { FindWindowExW(winit_hwnd as _, 0, std::ptr::null(), std::ptr::null()) };
+                            while child != 0 {
                                 let size = window.inner_size();
                                 if size.height > ui::CHROME_HEIGHT {
                                     unsafe { SetWindowPos(child, 0, 0, ui::CHROME_HEIGHT as i32, size.width as i32, size.height.saturating_sub(ui::CHROME_HEIGHT) as i32, SWP_NOZORDER | SWP_NOACTIVATE); }
                                 }
+                                child = unsafe { FindWindowExW(winit_hwnd as _, child, std::ptr::null(), std::ptr::null()) };
                             }
                         }
                     }
