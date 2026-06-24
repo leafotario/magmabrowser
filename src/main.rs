@@ -167,6 +167,23 @@ fn main() {
                         if let Some(wv) = webviews.get(&active_id) { let _ = wv.evaluate_script("location.reload()"); }
                     } else if cursor_x > w - 46.0 {
                         // Settings
+                        if settings_window.is_none() {
+                            let sw = WindowBuilder::new()
+                                .with_title("Configurações do Magma")
+                                .with_inner_size(winit::dpi::LogicalSize::new(450.0, 350.0))
+                                .build(elwt)
+                                .unwrap();
+                            let tx = ipc_tx.clone();
+                            let swv = wry::WebViewBuilder::new(&sw)
+                                .with_ipc_handler(move |request| {
+                                    let _ = tx.send(request);
+                                })
+                                .with_html(ui::settings::get_settings_html(&browser_config))
+                                .unwrap()
+                                .build()
+                                .unwrap();
+                            settings_window = Some((sw, swv));
+                        }
                     } else {
                         // Omnibox Click
                         omnibox.focus(&tab_manager.get_active_tab().unwrap().url);
@@ -436,9 +453,9 @@ fn main() {
                 }
                 
                 // Ostrimmer
-                if let Ok(memory::os_trim::TrimAction::EmergencyCrash) = os_trimmer.try_trim(None) {
-                    let active_id = tab_manager.get_active_tab().unwrap().id;
-                    if let Some(wv) = webviews.get(&active_id) {
+                let active_wv = webviews.get(&tab_manager.get_active_tab().unwrap().id);
+                if let Ok(memory::os_trim::TrimAction::EmergencyCrash) = os_trimmer.try_trim(active_wv) {
+                    if let Some(wv) = active_wv {
                         let _ = wv.load_url("https://magma.browser/local_cache");
                     }
                 }
