@@ -223,13 +223,13 @@ fn main() {
                     }
                 }
             }
-            Event::WindowEvent { event: WindowEvent::KeyboardInput { event: KeyEvent { state: ElementState::Pressed, logical_key, physical_key, text, .. }, .. }, .. } => {
+            Event::WindowEvent { event: WindowEvent::KeyboardInput { event: KeyEvent { state: ElementState::Pressed, logical_key, text, .. }, .. }, .. } => {
                 let ctrl = modifiers.control_key();
                 let shift = modifiers.shift_key();
                 
                 if ctrl {
-                    match physical_key {
-                        PhysicalKey::Code(winit::keyboard::KeyCode::Comma) => {
+                    match logical_key.as_ref() {
+                        Key::Character(",") => {
                             if settings_window.is_none() {
                                 let mut sw_builder = WindowBuilder::new()
                                     .with_title("Configurações do Petal")
@@ -252,11 +252,11 @@ fn main() {
                                 settings_window = Some((sw, swv));
                             }
                         }
-                        PhysicalKey::Code(winit::keyboard::KeyCode::KeyL) => {
+                        Key::Character("l") | Key::Character("L") => {
                             omnibox.focus(&tab_manager.get_active_tab().unwrap().url);
                             window.request_redraw();
                         }
-                        PhysicalKey::Code(winit::keyboard::KeyCode::KeyT) => {
+                        Key::Character("t") | Key::Character("T") => {
                             tab_manager.new_tab("https://petal.browser/local_cache".to_string());
                             let new_tab = tab_manager.get_active_tab().unwrap();
                             let new_wv = engine::builder::build_webview(
@@ -275,7 +275,7 @@ fn main() {
                             omnibox.defocus();
                             window.request_redraw();
                         }
-                        PhysicalKey::Code(winit::keyboard::KeyCode::KeyW) => {
+                        Key::Character("w") | Key::Character("W") => {
                             let idx = tab_manager.active_index;
                             if let Some(removed_id) = tab_manager.close_tab(idx) {
                                 webviews.remove(&removed_id);
@@ -299,7 +299,7 @@ fn main() {
                             omnibox.defocus();
                             window.request_redraw();
                         }
-                        PhysicalKey::Code(winit::keyboard::KeyCode::KeyV) => {
+                        Key::Character("v") | Key::Character("V") => {
                             if omnibox.is_focused {
                                 if let Ok(mut clipboard) = arboard::Clipboard::new() {
                                     if let Ok(text) = clipboard.get_text() {
@@ -310,7 +310,7 @@ fn main() {
                                 }
                             }
                         }
-                        PhysicalKey::Code(winit::keyboard::KeyCode::Tab) => {
+                        Key::Named(NamedKey::Tab) => {
                             let mut next = tab_manager.active_index + 1;
                             if shift {
                                 next = if tab_manager.active_index == 0 { tab_manager.tabs.len() - 1 } else { tab_manager.active_index - 1 };
@@ -403,22 +403,33 @@ fn main() {
                     }
                 }
             }
-            Event::WindowEvent { event: WindowEvent::Resized(size), .. } => {
+            Event::WindowEvent { window_id, event: WindowEvent::Resized(size), .. } => {
                 if size.width > 0 && size.height > 0 {
-                    let _ = sb_surface.resize(
-                        NonZeroU32::new(size.width).unwrap(),
-                        NonZeroU32::new(size.height).unwrap(),
-                    );
-                    window.request_redraw();
-                    
-                    for wv in webviews.values() {
-                        let bounds = wry::Rect {
-                            x: 0,
-                            y: ui::CHROME_HEIGHT as i32,
-                            width: size.width,
-                            height: size.height.saturating_sub(ui::CHROME_HEIGHT),
-                        };
-                        let _ = wv.set_bounds(bounds);
+                    if window_id == window.id() {
+                        let _ = sb_surface.resize(
+                            NonZeroU32::new(size.width).unwrap(),
+                            NonZeroU32::new(size.height).unwrap(),
+                        );
+                        window.request_redraw();
+                        
+                        for wv in webviews.values() {
+                            let bounds = wry::Rect {
+                                x: 0,
+                                y: ui::CHROME_HEIGHT as i32,
+                                width: size.width,
+                                height: size.height.saturating_sub(ui::CHROME_HEIGHT),
+                            };
+                            let _ = wv.set_bounds(bounds);
+                        }
+                    } else if let Some((sw, swv)) = settings_window.as_ref() {
+                        if window_id == sw.id() {
+                            let _ = swv.set_bounds(wry::Rect {
+                                x: 0,
+                                y: 0,
+                                width: size.width,
+                                height: size.height,
+                            });
+                        }
                     }
                 }
             }
