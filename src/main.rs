@@ -276,6 +276,17 @@ fn main() {
                             omnibox.defocus();
                             window.request_redraw();
                         }
+                        PhysicalKey::Code(winit::keyboard::KeyCode::KeyV) => {
+                            if omnibox.is_focused {
+                                if let Ok(mut clipboard) = arboard::Clipboard::new() {
+                                    if let Ok(text) = clipboard.get_text() {
+                                        let clean_text = text.replace('\n', "").replace('\r', "");
+                                        omnibox.insert_str(&clean_text);
+                                        window.request_redraw();
+                                    }
+                                }
+                            }
+                        }
                         PhysicalKey::Code(winit::keyboard::KeyCode::Tab) => {
                             let mut next = tab_manager.active_index + 1;
                             if shift {
