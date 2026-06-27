@@ -192,6 +192,7 @@ pub fn build_webview(
             );
         }})();
     "#, blocked_array_js, tab_id, tab_id, tab_id);
+    builder = builder.with_user_data_directory(_ephemeral_context.data_dir.clone());
     builder = builder.with_initialization_script(&init_script);
 
     #[cfg(target_os = "windows")]
