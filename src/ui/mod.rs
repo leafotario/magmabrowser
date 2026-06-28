@@ -63,17 +63,19 @@ pub fn hit_test_tab_bar(cursor_x: f64, num_tabs: usize, window_width: f64) -> Ta
 
 /// Limpa o buffer com uma cor de fundo
 pub fn clear_rect(buffer: &mut [u32], buf_width: usize, x: usize, y: usize, w: usize, h: usize, color: u32) {
-    for row in y..(y + h) {
+    if buf_width == 0 { return; }
+    let buf_height = buffer.len() / buf_width;
+
+    let start_y = y.min(buf_height);
+    let end_y = y.saturating_add(h).min(buf_height);
+    
+    let start_x = x.min(buf_width);
+    let end_x = x.saturating_add(w).min(buf_width);
+
+    for row in start_y..end_y {
         let row_base = row * buf_width;
-        for col in 0..w {
-            let px = x + col;
-            // FIX: interrompe ao ultrapassar a largura do buffer, evitando "row-wrap" visual
-            // (sem essa guarda, px >= buf_width causaria escrita na linha seguinte do buffer)
-            if px >= buf_width { break; }
-            let idx = row_base + px;
-            if idx < buffer.len() {
-                buffer[idx] = color;
-            }
+        for col in start_x..end_x {
+            buffer[row_base + col] = color;
         }
     }
 }
@@ -83,25 +85,29 @@ pub fn draw_beveled_rect(buffer: &mut [u32], buf_width: usize, x: usize, y: usiz
     if w < 2 || h < 2 {
         return clear_rect(buffer, buf_width, x, y, w, h, color);
     }
-    for row in 0..h {
-        let py = y + row;
-        let mut start_col = 0;
-        let mut end_col = w;
+    if buf_width == 0 { return; }
+    let buf_height = buffer.len() / buf_width;
 
-        if row == 0 || row == h - 1 {
-            start_col = 1;
-            end_col = w - 1; // seguro: w >= 2 garantido pela guarda acima
+    let start_y = y.min(buf_height);
+    let end_y = y.saturating_add(h).min(buf_height);
+
+    for py in start_y..end_y {
+        let row_in_rect = py - y;
+
+        let mut start_col = x;
+        let mut end_col = x.saturating_add(w);
+
+        if row_in_rect == 0 || row_in_rect == h - 1 {
+            start_col = start_col.saturating_add(1);
+            end_col = end_col.saturating_sub(1);
         }
 
+        let start_x = start_col.min(buf_width);
+        let end_x = end_col.min(buf_width);
+
         let row_base = py * buf_width;
-        for col in start_col..end_col {
-            let px = x + col;
-            // FIX: mesma guarda de row-wrap que clear_rect
-            if px >= buf_width { break; }
-            let offset = row_base + px;
-            if offset < buffer.len() {
-                buffer[offset] = color;
-            }
+        for px in start_x..end_x {
+            buffer[row_base + px] = color;
         }
     }
 }
@@ -116,32 +122,25 @@ pub fn draw_char_clipped(
     let buf_height = buffer.len() / buf_width;
 
     let code = c as usize;
-    // Fallback to '?' (ASCII 63) if out of bounds
     let glyph = font::FONT_8X16.get(code).unwrap_or(&font::FONT_8X16[63]);
 
-    for (row_idx, row_val) in glyph.iter().enumerate() {
-        let py = y.saturating_add(row_idx);
+    let min_y = clip_y.min(buf_height).max(y);
+    let max_y = clip_y.saturating_add(clip_h).min(buf_height).min(y.saturating_add(16));
+    if min_y >= max_y { return; }
 
-        // Vertical clipping
-        if py < clip_y || py >= clip_y.saturating_add(clip_h) || py >= buf_height {
-            continue;
-        }
+    let min_x = clip_x.min(buf_width).max(x);
+    let max_x = clip_x.saturating_add(clip_w).min(buf_width).min(x.saturating_add(8));
+    if min_x >= max_x { return; }
 
-        let offset = py.saturating_mul(buf_width);
-
-        for col_idx in 0..8 {
+    for py in min_y..max_y {
+        let row_idx = py - y;
+        let row_val = glyph[row_idx];
+        let row_base = py * buf_width;
+        
+        for px in min_x..max_x {
+            let col_idx = px - x;
             if (row_val & (1 << (7 - col_idx))) != 0 {
-                let px = x.saturating_add(col_idx);
-
-                // Horizontal clipping
-                if px < clip_x || px >= clip_x.saturating_add(clip_w) || px >= buf_width {
-                    continue;
-                }
-
-                let final_idx = offset.saturating_add(px);
-                if final_idx < buffer.len() {
-                    buffer[final_idx] = color;
-                }
+                buffer[row_base + px] = color;
             }
         }
     }

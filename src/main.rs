@@ -518,15 +518,26 @@ fn main() {
                     if size.width > 0 && size.height > 0 {
                         match sb_surface.buffer_mut() {
                             Ok(mut buffer) => {
-                                // Limpa a tela inteira (incluindo onde os snapshots vao depois da TabBar)
-                                buffer.fill(0xFF_12_12_12);
-                                
-                                // Renderiza barra de abas
-                                ui::render_tab_bar(&mut buffer, size.width as usize, &tab_manager.tabs, tab_manager.active_index);
-                                let url_to_display = tab_manager.get_active_tab().map(|t| t.url.as_str()).unwrap_or("");
-                                ui::omnibox::render_omnibox(&mut buffer, size.width as usize, &mut omnibox, url_to_display);
-                                
-                                let _ = buffer.present();
+                                let w = size.width as usize;
+                                let h = size.height as usize;
+                                let expected_len = w.checked_mul(h);
+
+                                match expected_len {
+                                    Some(len) if len == buffer.len() => {
+                                        // Limpa a tela inteira com tamanho coerente
+                                        buffer.fill(0xFF_12_12_12);
+                                        
+                                        // Renderiza barra de abas
+                                        ui::render_tab_bar(&mut buffer, w, &tab_manager.tabs, tab_manager.active_index);
+                                        let url_to_display = tab_manager.get_active_tab().map(|t| t.url.as_str()).unwrap_or("");
+                                        ui::omnibox::render_omnibox(&mut buffer, w, &mut omnibox, url_to_display);
+                                        
+                                        let _ = buffer.present();
+                                    }
+                                    _ => {
+                                        eprintln!("AVISO: Redraw ignorado devido a discrepância do buffer. Real: {}, Esperado: {:?}", buffer.len(), expected_len);
+                                    }
+                                }
                             }
                             Err(e) => {
                                 eprintln!("AVISO: Falha ao obter buffer gráfico do Softbuffer para redraw: {:?}", e);

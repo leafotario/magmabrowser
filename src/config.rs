@@ -112,10 +112,18 @@ impl BrowserConfig {
                             c.validate();
                             return c;
                         }
-                        Err(e) => println!("⚠️ Erro ao decodificar config.json: {}. Usando fallback.", e),
+                        Err(e) => {
+                            println!("⚠️ Erro ao decodificar config.json: {}. Criando backup do arquivo corrompido.", e);
+                            let mut corrupt_path = json_path.clone();
+                            corrupt_path.set_extension("json.corrupted");
+                            let _ = fs::rename(&json_path, corrupt_path);
+                        }
                     }
                 }
-                Err(e) => println!("⚠️ Falha de I/O ao ler config.json: {}.", e),
+                Err(e) => {
+                    println!("⚠️ Falha de I/O ao ler config.json: {}. O arquivo original não será modificado.", e);
+                    return config;
+                }
             }
         } else {
             // 2. Fallback de migração: Ler config.ini velho se json não existir
@@ -136,6 +144,9 @@ impl BrowserConfig {
                             }
                         }
                     }
+                    
+                    config.validate();
+                    
                     // Grava em JSON para completar a migração e renomeia o ini
                     if let Err(e) = config.save() {
                         println!("⚠️ Aviso: Falha ao migrar config.ini para config.json: {}", e);

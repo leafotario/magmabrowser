@@ -94,12 +94,17 @@ pub fn build_webview(
 
             try {{
                 new MutationObserver((mutations) => {{
-                    for (let m of mutations) {{
-                        for (let n of m.addedNodes) {{
+                    for (let i = 0; i < mutations.length; i++) {{
+                        let added = mutations[i].addedNodes;
+                        for (let j = 0; j < added.length; j++) {{
+                            let n = added[j];
                             if (n.nodeType === 1) {{
-                                if ((n.tagName === 'SCRIPT' || n.tagName === 'IFRAME' || n.tagName === 'IMG') && isBlocked(n.src)) {{
-                                    n.src = '';
-                                    n.remove();
+                                let tag = n.nodeName;
+                                if ((tag === 'SCRIPT' || tag === 'IFRAME' || tag === 'IMG') && n.src) {{
+                                    if (isBlocked(n.src)) {{
+                                        n.src = '';
+                                        n.remove();
+                                    }}
                                 }}
                             }}
                         }}
@@ -115,11 +120,16 @@ pub fn build_webview(
             }});
 
             let lastTitle = null;
+            let titleTimeout = null;
             function notifyTitle(t) {{
-                if (t !== lastTitle) {{
-                    lastTitle = t;
-                    if (window.ipc) window.ipc.postMessage('{}|title|' + t);
-                }}
+                let cleanTitle = (t || '').trim();
+                if (cleanTitle === lastTitle) return;
+                lastTitle = cleanTitle;
+                
+                if (titleTimeout) clearTimeout(titleTimeout);
+                titleTimeout = setTimeout(() => {{
+                    if (window.ipc) window.ipc.postMessage('{}|title|' + cleanTitle);
+                }}, 150);
             }}
 
             // Interceptação direta para SPAs que reescrevem document.title via JS
@@ -137,43 +147,45 @@ pub fn build_webview(
             }} catch(e) {{}}
 
             try {{
-                let titleObs = new MutationObserver(() => notifyTitle(document.title || ''));
-                let titleObserved = false;
+                let titleElement = null;
+                let titleObs = new MutationObserver(() => notifyTitle(document.title));
                 
-                function tryObserveTitle() {{
-                    if (titleObserved) return;
-                    let target = document.querySelector('title');
-                    if (target) {{
-                        titleObs.disconnect();
-                        titleObs.observe(target, {{ childList: true, characterData: true, subtree: true }});
-                        titleObserved = true;
-                    }}
+                function observeTitleElement(el) {{
+                    if (!el || titleElement === el) return;
+                    titleElement = el;
+                    titleObs.disconnect();
+                    titleObs.observe(titleElement, {{ childList: true, characterData: true, subtree: true }});
                 }}
 
                 let headObs = new MutationObserver((mutations) => {{
-                    for (let m of mutations) {{
-                        for (let n of m.addedNodes) {{
-                            if (n.nodeName === 'TITLE') {{
-                                tryObserveTitle();
-                                notifyTitle(document.title || '');
-                                headObs.disconnect();
-                                return;
+                    let shouldNotify = false;
+                    for (let i = 0; i < mutations.length; i++) {{
+                        let added = mutations[i].addedNodes;
+                        for (let j = 0; j < added.length; j++) {{
+                            if (added[j].nodeName === 'TITLE') {{
+                                observeTitleElement(added[j]);
+                                shouldNotify = true;
                             }}
                         }}
                     }}
+                    if (shouldNotify) notifyTitle(document.title);
                 }});
 
-                if (document.head) {{
-                    headObs.observe(document.head, {{ childList: true }});
-                    tryObserveTitle();
-                }} else {{
-                    document.addEventListener('DOMContentLoaded', () => {{
-                        if (document.head) headObs.observe(document.head, {{ childList: true }});
-                        tryObserveTitle();
-                        notifyTitle(document.title || '');
-                    }});
+                function initObservers() {{
+                    let head = document.querySelector('head') || document.documentElement;
+                    if (head) headObs.observe(head, {{ childList: true }});
+                    
+                    let target = document.querySelector('title');
+                    if (target) observeTitleElement(target);
+                    
+                    notifyTitle(document.title);
                 }}
-                notifyTitle(document.title || '');
+
+                if (document.body || document.head) {{
+                    initObservers();
+                }} else {{
+                    document.addEventListener('DOMContentLoaded', initObservers);
+                }}
             }} catch(e) {{}}
         }})();
     "#, blocked_array_js, tab_id, tab_id);
